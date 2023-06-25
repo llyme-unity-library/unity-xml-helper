@@ -1,0 +1,18 @@
+{
+    "name": "XmlHelper",
+    "rootNamespace": "XmlHelper",
+    "references": [
+        "GUID:3f5a4d757d7ec93498cfb28e3ef52750",
+        "GUID:bbe8dddfeb1d8ef498dd9a99660eee03",
+        "GUID:6e17303a7eda2044b95035f69dde5dc3"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

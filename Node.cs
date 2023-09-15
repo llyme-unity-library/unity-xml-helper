@@ -171,7 +171,9 @@ namespace XmlHelper
 			}
 		}
 
-		public static IEnumerable<XmlNode> Elements(this XmlNode element, Func<XmlNode, bool> predicate)
+		public static IEnumerable<XmlNode> Elements
+		(this XmlNode element,
+		Func<XmlNode, bool> predicate)
 		{
 			if (element == null)
 				yield break;
@@ -185,11 +187,11 @@ namespace XmlHelper
 					yield return child;
 			}
 		}
-
+		
 		public static bool TryElement
-			(this XmlNode element,
-			string nodeName,
-			out XmlNode value)
+		(this XmlNode element,
+		string nodeName,
+		out XmlNode value)
 		{
 			if (element == null)
 			{
@@ -256,21 +258,19 @@ namespace XmlHelper
 		/// Get an array of strings from the given node's InnerText.
 		/// Separator is comma ',' and newline '\n'.
 		/// </summary>
-		public static string[] StringsText(this XmlNode element, bool uppercase = true)
-		{
-			if (element == null)
-				return new string[0];
-
-			return TextHelper.Strings.Split(element.InnerText, uppercase, ",", "\n").ToArray();
-		}
+		public static string[] StringsText
+		(this XmlNode element) =>
+			element != null
+			? element.InnerText.Split(",", "\r\n", "\n")
+			: new string[0];
 
 		/// <summary>
 		/// Get an array of strings from the node's children.
 		/// </summary>
 		public static string[] Strings
-			(this IEnumerable<XmlNode> elements,
-			bool trim = true,
-			bool uppercase = true)
+		(this IEnumerable<XmlNode> elements,
+		bool trim = true,
+		bool uppercase = true)
 		{
 			if (elements == null)
 				return new string[0];
@@ -316,7 +316,6 @@ namespace XmlHelper
 		public static string String
 			(this XmlNode node,
 			bool trim = false,
-			bool uppercase = false,
 			string @default = "")
 		{
 			if (node == null)
@@ -327,9 +326,6 @@ namespace XmlHelper
 			if (trim)
 				value = value.Trim();
 
-			if (uppercase)
-				value = value.ToUpper();
-
 			return value;
 		}
 
@@ -337,9 +333,26 @@ namespace XmlHelper
 			(this XmlNode node,
 			string childName,
 			bool trim = false,
-			bool uppercase = false,
 			string @default = "") =>
-			String(node.Element(childName), trim, uppercase, @default);
+			TryStringOf(node, childName, out string value, trim)
+			? value
+			: @default;
+		
+		public static bool TryStringOf
+		(this XmlNode element,
+		string childName,
+		out string value,
+		bool trim = false)
+		{
+			if (!TryElement(element, childName, out XmlNode child))
+			{
+				value = null;
+				return false;
+			}
+			
+			value = String(child, trim);
+			return true;
+		}
 
 		/// <summary>
 		/// Returns a trimmed text with normalized whitespaces.
@@ -373,37 +386,81 @@ namespace XmlHelper
 			return @default;
 		}
 
-		public static float FloatOf
-			(this XmlNode element,
-			string nodeName,
-			float @default = 0f)
+		public static bool TryFloatOf
+		(this XmlNode node,
+		string nodeName,
+		out float value)
 		{
-			if (element == null)
-				return @default;
+			if (node == null)
+			{
+				value = default;
+				return false;
+			}
 
-			XmlNode node = element.Element(nodeName);
+			XmlNode childNode = node.Element(nodeName);
+			
+			if (childNode == null)
+			{
+				value = default;
+				return false;
+			}
 
-			if (node != null && float.TryParse(node.InnerText, out float value))
-				return value;
+			return float.TryParse(childNode.InnerText, out value);
+		}
 
-			return @default;
+		public static float FloatOf
+		(this XmlNode node,
+		string nodeName,
+		float @default = 0f) =>
+			TryFloatOf(node, nodeName, out float value)
+			? value
+			: @default;
+
+		public static float? FloatOf
+		(this XmlNode node,
+		string nodeName,
+		float? @default = null) =>
+			TryFloatOf(node, nodeName, out float value)
+			? value
+			: @default;
+		
+		public static bool TryBoolOf
+		(this XmlNode node,
+		string nodeName,
+		out bool value)
+		{
+			if (node == null)
+			{
+				value = default;
+				return false;
+			}
+
+			XmlNode childNode = node.Element(nodeName);
+			
+			if (childNode == null)
+			{
+				value = default;
+				return false;
+			}
+
+			return bool.TryParse(childNode.InnerText, out value);
 		}
 
 		public static bool BoolOf
-			(this XmlNode element,
-			string nodeName,
-			bool @default = false)
-		{
-			if (element == null)
-				return @default;
+		(this XmlNode node,
+		string nodeName,
+		bool @default = false) =>
+			TryBoolOf(node, nodeName, out bool value)
+			? value
+			: @default;
 
-			XmlNode node = element.Element(nodeName);
-
-			if (node != null && bool.TryParse(node.InnerText, out bool value))
-				return value;
-
-			return @default;
-		}
+		public static bool? BoolOf
+		(this XmlNode node,
+		string nodeName,
+		bool? @default = null) =>
+			TryBoolOf(node, nodeName, out bool value)
+			? value
+			: @default;
 
 		public static Quaternion QuaternionOf
 			(this XmlNode node,
@@ -465,15 +522,37 @@ namespace XmlHelper
 		}
 
 		public static Color ColorOf
-			(this XmlNode element,
-			string nodeName,
-			Color @default = default)
+		(this XmlNode element,
+		string nodeName,
+		Color @default = default)
 		{
 			if (element == null)
 				return @default;
 
 			XmlNode node = element.Element(nodeName);
-			return node != null ? node.InnerText.Color() : @default;
+			
+			return
+				node != null &&
+				node.InnerText.Color(out Color color)
+				? color
+				: @default;
+		}
+		
+		public static Gradient GradientOf
+		(this XmlNode node,
+		string nodeName,
+		Gradient @default = null)
+		{
+			if (node == null)
+				return @default;
+
+			XmlNode child = node.Element(nodeName);
+			
+			return
+				child != null &&
+				child.InnerText.Gradient(out Gradient gradient)
+				? gradient
+				: @default;
 		}
 
 		public static RangeInt[] RangesInt
